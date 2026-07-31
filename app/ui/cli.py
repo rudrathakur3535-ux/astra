@@ -39,7 +39,7 @@ class TerminalUI:
             f"[bold cyan]Project Astra - Personal AI OS[/bold cyan]\n"
             f"[dim]Version 0.1.0 | Phase 1 (Day 3: Ears & Natural Voice Subsystem)[/dim]\n\n"
             f"Welcome back, [bold green]{self.user_name}[/bold green]!\n"
-            f"🎙 Voice Engine: Type [yellow]/voice on[/yellow] to enable continuous microphone listening ('Hey Astra').\n"
+            f"[yellow]Voice Engine[/yellow]: Type [yellow]/voice on[/yellow] to enable continuous microphone listening ('Hey Astra').\n"
             f"Type your message to start chatting, or type [yellow]/help[/yellow] for available commands."
         )
         console.print(Panel(banner_content, border_style="cyan", expand=False))
@@ -93,11 +93,11 @@ class TerminalUI:
     def _on_voice_state_change(self, state: VoiceState) -> None:
         """Callback triggered when Voice Subsystem changes state."""
         state_messages = {
-            VoiceState.LISTENING_FOR_WAKEWORD: "[astra.voice]🎙 [Voice]: Listening for 'Hey Astra'...[/astra.voice]",
-            VoiceState.RECORDING_USER_PROMPT: "[astra.voice]👂 [Voice]: Listening to your prompt...[/astra.voice]",
-            VoiceState.PROCESSING_THOUGHTS: "[astra.voice]🧠 [Voice]: Astra is thinking...[/astra.voice]",
-            VoiceState.SPEAKING_RESPONSE: "[astra.voice]🔊 [Voice]: Astra is speaking...[/astra.voice]",
-            VoiceState.OFFLINE: "[astra.voice]🔇 [Voice]: Voice engine offline.[/astra.voice]"
+            VoiceState.LISTENING_FOR_WAKEWORD: "[astra.voice][Voice]: Listening for 'Hey Astra'...[/astra.voice]",
+            VoiceState.RECORDING_USER_PROMPT: "[astra.voice][Voice]: Listening to your prompt...[/astra.voice]",
+            VoiceState.PROCESSING_THOUGHTS: "[astra.voice][Voice]: Astra is thinking...[/astra.voice]",
+            VoiceState.SPEAKING_RESPONSE: "[astra.voice][Voice]: Astra is speaking...[/astra.voice]",
+            VoiceState.OFFLINE: "[astra.voice][Voice]: Voice engine offline.[/astra.voice]"
         }
         msg = state_messages.get(state)
         if msg:
@@ -106,9 +106,9 @@ class TerminalUI:
     def _on_voice_transcript(self, sender: str, transcript: str) -> None:
         """Callback triggered when Voice Subsystem transcribes audio."""
         if sender == "user":
-            console.print(f"\n[astra.user]🎙 {self.user_name} (Voice):[/astra.user] {transcript}")
+            console.print(f"\n[astra.user][Voice] {self.user_name}:[/astra.user] {transcript}")
         elif sender == "assistant":
-            console.print(f"[astra.assistant]🗣 Astra (Voice):[/astra.assistant] {transcript}")
+            console.print(f"[astra.assistant][Voice] Astra:[/astra.assistant] {transcript}")
 
     def _render_history(self, history: list) -> None:
         """Renders formatted session history in terminal."""

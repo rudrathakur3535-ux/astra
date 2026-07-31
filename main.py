@@ -1,9 +1,23 @@
 """
 Project Astra - Main Entrypoint
-Day 2: Conversational Brain with Terminal Interface and Streaming Responses.
+Day 3: Ears & Natural Voice Subsystem Integration.
 """
 
 import sys
+import io
+
+# Enforce UTF-8 output encoding for Windows compatibility
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+if sys.stderr and hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 from app.ui.cli import TerminalUI
 from app.utils.logger import logger
 
