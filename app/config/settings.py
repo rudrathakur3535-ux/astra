@@ -28,6 +28,26 @@ class Settings(BaseModel):
     DEFAULT_TEMPERATURE: float = Field(default=0.7, description="Default generation temperature")
     MAX_TOKENS: int = Field(default=2048, description="Max output tokens")
 
+    # Voice & Audio Settings
+    ELEVENLABS_API_KEY: str = Field(
+        default_factory=lambda: os.getenv("ELEVENLABS_API_KEY", ""),
+        description="ElevenLabs API key for TTS"
+    )
+    ELEVENLABS_VOICE_ID: str = Field(
+        default_factory=lambda: os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM"),
+        description="ElevenLabs Female Voice ID (Default: Rachel)"
+    )
+    WAKE_WORD: str = Field(
+        default_factory=lambda: os.getenv("WAKE_WORD", "hey astra"),
+        description="Wake word trigger string"
+    )
+    SAMPLE_RATE: int = Field(default=16000, description="Audio sampling rate in Hz")
+    AUDIO_CHANNELS: int = Field(default=1, description="Audio channels (mono)")
+    VOICE_ENABLED: bool = Field(
+        default_factory=lambda: os.getenv("VOICE_ENABLED", "True").lower() in ("true", "1", "t"),
+        description="Voice mode enabled flag"
+    )
+
     # Logging Settings
     LOG_LEVEL: str = Field(
         default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"),
@@ -43,5 +63,11 @@ class Settings(BaseModel):
         """Returns True if a non-placeholder OpenAI API key is set."""
         key = self.OPENAI_API_KEY.strip()
         return bool(key) and key != "your_openai_api_key_here"
+
+    @property
+    def is_elevenlabs_key_valid(self) -> bool:
+        """Returns True if a non-placeholder ElevenLabs API key is set."""
+        key = self.ELEVENLABS_API_KEY.strip()
+        return bool(key) and key != "your_elevenlabs_api_key_here"
 
 settings = Settings()

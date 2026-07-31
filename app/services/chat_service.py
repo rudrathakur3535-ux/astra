@@ -1,16 +1,21 @@
 from typing import Generator, Optional, Callable, Dict, Any
 from app.brain.conversation import ConversationManager
 from app.brain.llm import LLMClient
+from app.voice import AudioManager, VoiceState
 from app.config import settings
 from app.utils.logger import logger
 
 class ChatService:
-    """Service layer coordinating conversation state, system commands, and LLM streaming."""
+    """Service layer coordinating conversation state, system commands, LLM streaming, and Voice Subsystem."""
 
     def __init__(self, user_name: Optional[str] = None):
         self.user_name = user_name or settings.USER_NAME
         self.conversation = ConversationManager(user_name=self.user_name)
         self.llm_client = LLMClient()
+        self.audio_manager = AudioManager()
+
+        # Connect audio manager to chat service processor
+        self.audio_manager.set_chat_processor(self.get_response_sync)
         logger.info(f"ChatService initialized for user: {self.user_name}")
 
     def process_user_input(
@@ -63,6 +68,13 @@ class ChatService:
 
         return stream_wrapper()
 
+    def get_response_sync(self, user_input: str) -> str:
+        """Synchronous wrapper to get LLM response string for voice output."""
+        stream = self.process_user_input(user_input)
+        if not stream:
+            return ""
+        return "".join(list(stream))
+
     def execute_command(self, command_str: str) -> Dict[str, Any]:
         """Executes system slash commands.
         
@@ -71,6 +83,7 @@ class ChatService:
             /clear: Clear conversation context
             /history: Show conversation history
             /model [name]: View or change active LLM model
+            /voice [on|off|status]: Toggle or check voice mode
             /exit: Exit Astra
             
         Returns:
@@ -81,6 +94,7 @@ class ChatService:
         arg = cmd_parts[1].strip() if len(cmd_parts) > 1 else ""
 
         if command in ("/exit", "/quit"):
+            self.audio_manager.stop()
             return {"action": "exit", "message": f"Goodbye {self.user_name}."}
 
         elif command == "/clear":
@@ -100,14 +114,26 @@ class ChatService:
             else:
                 return {"action": "model", "message": f"Current active model: [bold cyan]{self.llm_client.model_name}[/bold cyan]"}
 
+        elif command == "/voice":
+            if arg.lower() == "on":
+                self.audio_manager.start()
+                return {"action": "voice", "message": "Voice Subsystem [bold green]ACTIVATED[/bold green] (Listening for 'Hey Astra')."}
+            elif arg.lower() == "off":
+                self.audio_manager.stop()
+                return {"action": "voice", "message": "Voice Subsystem [bold red]DEACTIVATED[/bold red]."}
+            else:
+                status_str = "ACTIVE" if self.audio_manager._running else "INACTIVE"
+                return {"action": "voice", "message": f"Voice Subsystem Status: [bold yellow]{status_str}[/bold yellow]"}
+
         elif command == "/help":
             help_text = (
                 "[bold cyan]Available Astra Commands:[/bold cyan]\n"
-                "  [green]/clear[/green]   - Clear active conversation memory\n"
-                "  [green]/history[/green] - View session conversation history\n"
-                "  [green]/model[/green]   - View or switch active LLM model (e.g. /model gpt-4o)\n"
-                "  [green]/help[/green]    - Show this help menu\n"
-                "  [green]/exit[/green]    - Exit Project Astra"
+                "  [green]/voice on|off[/green] - Turn background microphone & voice engine on/off\n"
+                "  [green]/clear[/green]         - Clear active conversation memory\n"
+                "  [green]/history[/green]       - View session conversation history\n"
+                "  [green]/model[/green]         - View or switch active LLM model (e.g. /model gpt-4o)\n"
+                "  [green]/help[/green]          - Show this help menu\n"
+                "  [green]/exit[/green]          - Exit Project Astra"
             )
             return {"action": "help", "message": help_text}
 

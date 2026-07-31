@@ -2,12 +2,12 @@ import sys
 from typing import Optional
 from rich.console import Console
 from rich.panel import Panel
-from rich.markdown import Markdown
 from rich.prompt import Prompt
 from rich.theme import Theme
 
 from app.config import settings
 from app.services.chat_service import ChatService
+from app.voice import VoiceState
 from app.utils.logger import logger
 
 # Custom Rich theme for Astra terminal UI
@@ -15,6 +15,7 @@ custom_theme = Theme({
     "astra.banner": "bold cyan",
     "astra.user": "bold green",
     "astra.assistant": "bold bright_magenta",
+    "astra.voice": "bold yellow",
     "astra.system": "yellow",
     "astra.error": "bold red"
 })
@@ -28,12 +29,17 @@ class TerminalUI:
         self.chat_service = chat_service or ChatService()
         self.user_name = self.chat_service.user_name
 
+        # Register UI callbacks with audio manager
+        self.chat_service.audio_manager.on_state_change = self._on_voice_state_change
+        self.chat_service.audio_manager.on_transcript = self._on_voice_transcript
+
     def display_welcome_banner(self) -> None:
         """Renders the Astra startup banner in the terminal."""
         banner_content = (
             f"[bold cyan]Project Astra - Personal AI OS[/bold cyan]\n"
-            f"[dim]Version 0.1.0 | Phase 1 (Day 2: Conversational Brain)[/dim]\n\n"
+            f"[dim]Version 0.1.0 | Phase 1 (Day 3: Ears & Natural Voice Subsystem)[/dim]\n\n"
             f"Welcome back, [bold green]{self.user_name}[/bold green]!\n"
+            f"🎙 Voice Engine: Type [yellow]/voice on[/yellow] to enable continuous microphone listening ('Hey Astra').\n"
             f"Type your message to start chatting, or type [yellow]/help[/yellow] for available commands."
         )
         console.print(Panel(banner_content, border_style="cyan", expand=False))
@@ -76,12 +82,33 @@ class TerminalUI:
                     console.print()  # Newline after stream finishes
 
             except (KeyboardInterrupt, EOFError):
+                self.chat_service.audio_manager.stop()
                 console.print(f"\n\n[astra.assistant]Astra:[/astra.assistant] Goodbye {self.user_name}. Shutdown initiated.")
                 logger.info("Terminal session ended by user signal.")
                 break
             except Exception as e:
                 console.print(f"\n[astra.error]An unexpected error occurred: {e}[/astra.error]")
                 logger.error(f"UI Loop Exception: {e}", exc_info=True)
+
+    def _on_voice_state_change(self, state: VoiceState) -> None:
+        """Callback triggered when Voice Subsystem changes state."""
+        state_messages = {
+            VoiceState.LISTENING_FOR_WAKEWORD: "[astra.voice]🎙 [Voice]: Listening for 'Hey Astra'...[/astra.voice]",
+            VoiceState.RECORDING_USER_PROMPT: "[astra.voice]👂 [Voice]: Listening to your prompt...[/astra.voice]",
+            VoiceState.PROCESSING_THOUGHTS: "[astra.voice]🧠 [Voice]: Astra is thinking...[/astra.voice]",
+            VoiceState.SPEAKING_RESPONSE: "[astra.voice]🔊 [Voice]: Astra is speaking...[/astra.voice]",
+            VoiceState.OFFLINE: "[astra.voice]🔇 [Voice]: Voice engine offline.[/astra.voice]"
+        }
+        msg = state_messages.get(state)
+        if msg:
+            console.print(f"\n{msg}")
+
+    def _on_voice_transcript(self, sender: str, transcript: str) -> None:
+        """Callback triggered when Voice Subsystem transcribes audio."""
+        if sender == "user":
+            console.print(f"\n[astra.user]🎙 {self.user_name} (Voice):[/astra.user] {transcript}")
+        elif sender == "assistant":
+            console.print(f"[astra.assistant]🗣 Astra (Voice):[/astra.assistant] {transcript}")
 
     def _render_history(self, history: list) -> None:
         """Renders formatted session history in terminal."""
