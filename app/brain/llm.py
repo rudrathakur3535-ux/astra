@@ -1,11 +1,13 @@
-from typing import List, Dict, Generator, Optional, Callable
+from typing import List, Dict, Generator, Optional, Callable, Any, Tuple
+import json
 import openai
 from openai import OpenAI, OpenAIError
 from app.config import settings
+from app.tools.tool_registry import tool_registry
 from app.utils.logger import logger
 
 class LLMClient:
-    """Production-ready OpenAI API client supporting streaming responses and model switching."""
+    """Production-ready OpenAI API client supporting streaming responses, tool calling, and model switching."""
 
     def __init__(self, model_name: Optional[str] = None):
         self.model_name = model_name or settings.MODEL
@@ -31,9 +33,73 @@ class LLMClient:
         self.model_name = model_name
         logger.info(f"LLM model changed to: {self.model_name}")
 
+    def chat_completion(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 2048
+    ) -> Tuple[Optional[str], Optional[List[Dict[str, Any]]]]:
+        """Sends a completion request supporting tool/function calls.
+        
+        Returns:
+            Tuple[Optional[str], Optional[List[Dict[str, Any]]]]: (content_response, list_of_tool_calls)
+        """
+        if not settings.is_api_key_valid or not self.client:
+            self._initialize_client()
+            if not self.client:
+                return (
+                    "[Notice] No valid OPENAI_API_KEY configured in .env. Add your key to activate AI tools.",
+                    None
+                )
+
+        models_to_try = [self.model_name]
+        if self.model_name not in ("gpt-4o", "gpt-4o-mini", "gpt-4-turbo"):
+            models_to_try.append("gpt-4o")
+            models_to_try.append("gpt-4o-mini")
+
+        for model in models_to_try:
+            try:
+                kwargs: Dict[str, Any] = {
+                    "model": model,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens
+                }
+
+                if tools:
+                    kwargs["tools"] = tools
+                    kwargs["tool_choice"] = "auto"
+
+                logger.debug(f"Calling OpenAI chat API (model={model})...")
+                response = self.client.chat.completions.create(**kwargs)
+                message = response.choices[0].message
+
+                # Check if model produced tool calls
+                if message.tool_calls:
+                    parsed_tool_calls = []
+                    for tc in message.tool_calls:
+                        parsed_tool_calls.append({
+                            "id": tc.id,
+                            "name": tc.function.name,
+                            "arguments": json.loads(tc.function.arguments) if tc.function.arguments else {}
+                        })
+                    return message.content, parsed_tool_calls
+
+                return message.content, None
+
+            except OpenAIError as e:
+                logger.warning(f"OpenAI API call failed for model {model}: {e}")
+                continue
+            except Exception as e:
+                logger.error(f"Unexpected error in chat_completion: {e}")
+                break
+
+        return "API request failed. Please check network or API key configuration.", None
+
     def stream_completion(
         self,
-        messages: List[Dict[str, str]],
+        messages: List[Dict[str, Any]],
         temperature: float = 0.7,
         max_tokens: int = 2048,
         on_chunk: Optional[Callable[[str], None]] = None
@@ -72,8 +138,6 @@ class LLMClient:
                 return error_msg
 
         full_content = []
-        
-        # Try requested model, with automatic fallback if model name isn't found (e.g. gpt-5.5 -> gpt-4o)
         models_to_try = [self.model_name]
         if self.model_name not in ("gpt-4o", "gpt-4o-mini", "gpt-4-turbo"):
             models_to_try.append("gpt-4o")
@@ -99,13 +163,11 @@ class LLMClient:
                             on_chunk(content_piece)
                         yield content_piece
 
-                # If successful, break model attempt loop
                 break
 
             except OpenAIError as e:
                 last_exception = e
                 logger.warning(f"OpenAI API call failed for model {model}: {e}")
-                # Try next fallback model if available
                 continue
             except Exception as e:
                 last_exception = e

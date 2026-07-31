@@ -1,12 +1,15 @@
-from typing import Generator, Optional, Callable, Dict, Any
+import json
+from typing import Generator, Optional, Callable, Dict, Any, List
 from app.brain.conversation import ConversationManager
 from app.brain.llm import LLMClient
+from app.tools import tool_registry, tool_router
+from app.models.tool_request import ToolRequest
 from app.voice import AudioManager, VoiceState
 from app.config import settings
 from app.utils.logger import logger
 
 class ChatService:
-    """Service layer coordinating conversation state, system commands, LLM streaming, and Voice Subsystem."""
+    """Service layer coordinating conversation state, system commands, tool calling, and Voice Subsystem."""
 
     def __init__(self, user_name: Optional[str] = None):
         self.user_name = user_name or settings.USER_NAME
@@ -23,7 +26,7 @@ class ChatService:
         user_input: str,
         on_chunk: Optional[Callable[[str], None]] = None
     ) -> Optional[Generator[str, None, None]]:
-        """Processes user input string, handles slash commands, or routes to LLM stream.
+        """Processes user input string, handles slash commands, tool execution, and LLM output.
         
         Args:
             user_input: Raw user input text.
@@ -40,31 +43,84 @@ class ChatService:
         self.conversation.add_user_message(trimmed_input)
         logger.info(f"User message received ({len(trimmed_input)} chars)")
 
-        # Prepare messages context for LLM
-        messages = self.conversation.get_messages()
-
         def stream_wrapper() -> Generator[str, None, None]:
-            full_response_parts = []
-            try:
-                for chunk in self.llm_client.stream_completion(
-                    messages=messages,
-                    on_chunk=on_chunk
-                ):
-                    full_response_parts.append(chunk)
+            messages = self.conversation.get_messages()
+            tools_schema = tool_registry.get_openai_tools_schema()
+
+            # 1. Check if query requires tool calls
+            content, tool_calls = self.llm_client.chat_completion(messages=messages, tools=tools_schema)
+
+            if tool_calls:
+                # Add assistant message with tool calls to memory
+                self.conversation._history.append({
+                    "role": "assistant",
+                    "content": content,
+                    "tool_calls": [
+                        {
+                            "id": tc["id"],
+                            "type": "function",
+                            "function": {
+                                "name": tc["name"],
+                                "arguments": json.dumps(tc["arguments"])
+                            }
+                        } for tc in tool_calls
+                    ]
+                })
+
+                # Execute each tool call securely via ToolRouter
+                for tc in tool_calls:
+                    tool_name = tc["name"]
+                    arguments = tc["arguments"]
+                    call_id = tc["id"]
+
+                    status_msg = f"\n[bold yellow]⚡ [Executing Desktop Tool]: {tool_name}({arguments})[/bold yellow]\n"
+                    if on_chunk:
+                        on_chunk(status_msg)
+                    yield status_msg
+
+                    request = ToolRequest(tool_name=tool_name, arguments=arguments, call_id=call_id)
+                    tool_response = tool_router.execute(request)
+
+                    # Append tool execution result back to conversation context
+                    tool_result_content = json.dumps({
+                        "success": tool_response.success,
+                        "data": tool_response.data,
+                        "error": tool_response.error_message
+                    })
+
+                    self.conversation._history.append({
+                        "role": "tool",
+                        "tool_call_id": call_id,
+                        "content": tool_result_content
+                    })
+
+                # Stream final synthesized assistant response
+                updated_messages = self.conversation.get_messages()
+                full_parts = []
+                for chunk in self.llm_client.stream_completion(messages=updated_messages, on_chunk=on_chunk):
+                    full_parts.append(chunk)
                     yield chunk
 
-                full_response = "".join(full_response_parts)
-                # Store assistant's full response into conversation memory
+                full_response = "".join(full_parts)
                 if full_response.strip():
                     self.conversation.add_assistant_message(full_response)
-                    logger.info(f"Assistant response stored ({len(full_response)} chars)")
 
-            except Exception as e:
-                logger.error(f"Error during message stream processing: {e}")
-                error_msg = f"\n[System Error]: {e}"
-                if on_chunk:
-                    on_chunk(error_msg)
-                yield error_msg
+            else:
+                # Direct streaming response without tool calling
+                if content and not settings.is_api_key_valid:
+                    if on_chunk:
+                        on_chunk(content)
+                    yield content
+                    self.conversation.add_assistant_message(content)
+                else:
+                    full_parts = []
+                    for chunk in self.llm_client.stream_completion(messages=messages, on_chunk=on_chunk):
+                        full_parts.append(chunk)
+                        yield chunk
+
+                    full_response = "".join(full_parts)
+                    if full_response.strip():
+                        self.conversation.add_assistant_message(full_response)
 
         return stream_wrapper()
 
@@ -79,6 +135,7 @@ class ChatService:
         """Executes system slash commands.
         
         Supported commands:
+            /tools: List all registered desktop tools
             /help: Show help menu
             /clear: Clear conversation context
             /history: Show conversation history
@@ -96,6 +153,11 @@ class ChatService:
         if command in ("/exit", "/quit"):
             self.audio_manager.stop()
             return {"action": "exit", "message": f"Goodbye {self.user_name}."}
+
+        elif command == "/tools":
+            tools = tool_registry.list_tools()
+            tools_fmt = "\n".join([f"  • [bold cyan]{t}[/bold cyan]: {tool_registry.get_tool(t).description}" for t in tools])
+            return {"action": "tools", "message": f"[bold yellow]Registered Desktop Tools ({len(tools)}):[/bold yellow]\n{tools_fmt}"}
 
         elif command == "/clear":
             self.conversation.clear()
@@ -128,6 +190,7 @@ class ChatService:
         elif command == "/help":
             help_text = (
                 "[bold cyan]Available Astra Commands:[/bold cyan]\n"
+                "  [green]/tools[/green]         - List all registered desktop & system tools\n"
                 "  [green]/voice on|off[/green] - Turn background microphone & voice engine on/off\n"
                 "  [green]/clear[/green]         - Clear active conversation memory\n"
                 "  [green]/history[/green]       - View session conversation history\n"

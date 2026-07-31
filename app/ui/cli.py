@@ -1,12 +1,13 @@
 import sys
-from typing import Optional
+from typing import Optional, Dict, Any
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Prompt
+from rich.prompt import Prompt, Confirm
 from rich.theme import Theme
 
 from app.config import settings
 from app.services.chat_service import ChatService
+from app.security import permission_manager
 from app.voice import VoiceState
 from app.utils.logger import logger
 
@@ -29,18 +30,19 @@ class TerminalUI:
         self.chat_service = chat_service or ChatService()
         self.user_name = self.chat_service.user_name
 
-        # Register UI callbacks with audio manager
+        # Register UI callbacks
         self.chat_service.audio_manager.on_state_change = self._on_voice_state_change
         self.chat_service.audio_manager.on_transcript = self._on_voice_transcript
+        permission_manager.set_prompt_callback(self._on_permission_prompt)
 
     def display_welcome_banner(self) -> None:
         """Renders the Astra startup banner in the terminal."""
         banner_content = (
             f"[bold cyan]Project Astra - Personal AI OS[/bold cyan]\n"
-            f"[dim]Version 0.1.0 | Phase 1 (Day 3: Ears & Natural Voice Subsystem)[/dim]\n\n"
+            f"[dim]Version 0.1.0 | Phase 1 (Day 4: Desktop Control Engine & Hands)[/dim]\n\n"
             f"Welcome back, [bold green]{self.user_name}[/bold green]!\n"
-            f"[yellow]Voice Engine[/yellow]: Type [yellow]/voice on[/yellow] to enable continuous microphone listening ('Hey Astra').\n"
-            f"Type your message to start chatting, or type [yellow]/help[/yellow] for available commands."
+            f"🛠 [bold yellow]Desktop Hands[/bold yellow]: Ask me to open apps, create folders, check RAM, copy/paste, or focus windows!\n"
+            f"Type [yellow]/tools[/yellow] to view registered tools, or [yellow]/help[/yellow] for commands."
         )
         console.print(Panel(banner_content, border_style="cyan", expand=False))
 
@@ -89,6 +91,15 @@ class TerminalUI:
             except Exception as e:
                 console.print(f"\n[astra.error]An unexpected error occurred: {e}[/astra.error]")
                 logger.error(f"UI Loop Exception: {e}", exc_info=True)
+
+    def _on_permission_prompt(self, action_name: str, arguments: Dict[str, Any]) -> bool:
+        """Interactive terminal prompt asking permission for sensitive desktop actions."""
+        console.print(
+            f"\n[bold red]⚠️  PERMISSION REQUIRED[/bold red]: Astra wants to perform a sensitive action:\n"
+            f"   Action: [bold yellow]{action_name}[/bold yellow]\n"
+            f"   Arguments: [dim]{arguments}[/dim]"
+        )
+        return Confirm.ask("Do you authorize Astra to proceed with this action?", default=False)
 
     def _on_voice_state_change(self, state: VoiceState) -> None:
         """Callback triggered when Voice Subsystem changes state."""
