@@ -1,13 +1,21 @@
 """
-Project Astra - Main Application Entrypoint
-Day 1: Basic setup and architecture initialization.
+Project Astra - Main Entrypoint
+Day 2: Conversational Brain with Terminal Interface and Streaming Responses.
 """
 
-from app.config import settings
+import sys
+from app.ui.cli import TerminalUI
+from app.utils.logger import logger
 
 def main():
-    print(f"[{settings.APP_NAME}] Initializing...")
-    print("Hello AI")
+    """Initializes and runs Project Astra AI OS."""
+    try:
+        logger.info("Starting Project Astra Application...")
+        cli = TerminalUI()
+        cli.run()
+    except Exception as e:
+        logger.critical(f"Fatal error starting Astra: {e}", exc_info=True)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

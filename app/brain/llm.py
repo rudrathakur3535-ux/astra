@@ -1,0 +1,122 @@
+from typing import List, Dict, Generator, Optional, Callable
+import openai
+from openai import OpenAI, OpenAIError
+from app.config import settings
+from app.utils.logger import logger
+
+class LLMClient:
+    """Production-ready OpenAI API client supporting streaming responses and model switching."""
+
+    def __init__(self, model_name: Optional[str] = None):
+        self.model_name = model_name or settings.MODEL
+        self.client: Optional[OpenAI] = None
+        self._initialize_client()
+
+    def _initialize_client(self) -> None:
+        """Initializes the OpenAI API client using configured settings."""
+        if not settings.is_api_key_valid:
+            logger.warning("OpenAI API key is missing or invalid placeholder.")
+            self.client = None
+            return
+
+        try:
+            self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            logger.info(f"OpenAI client initialized with model: {self.model_name}")
+        except Exception as e:
+            logger.error(f"Failed to initialize OpenAI client: {e}")
+            self.client = None
+
+    def set_model(self, model_name: str) -> None:
+        """Dynamically updates the LLM model to use for completion requests."""
+        self.model_name = model_name
+        logger.info(f"LLM model changed to: {self.model_name}")
+
+    def stream_completion(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+        on_chunk: Optional[Callable[[str], None]] = None
+    ) -> Generator[str, None, str]:
+        """Streams LLM completion response chunks.
+        
+        Args:
+            messages: List of message dictionaries with 'role' and 'content'.
+            temperature: Generation temperature.
+            max_tokens: Maximum tokens in completion.
+            on_chunk: Optional callback function triggered for each token chunk.
+            
+        Yields:
+            str: Each text chunk as it arrives from the stream.
+            
+        Returns:
+            str: Full concatenated response content.
+        """
+        if not settings.is_api_key_valid:
+            error_msg = (
+                "\n[Notice] No valid OPENAI_API_KEY configured in .env.\n"
+                "Please add your API key to .env (OPENAI_API_KEY=your_key_here) to activate AI responses."
+            )
+            if on_chunk:
+                on_chunk(error_msg)
+            yield error_msg
+            return error_msg
+
+        if not self.client:
+            self._initialize_client()
+            if not self.client:
+                error_msg = "OpenAI client is not initialized."
+                if on_chunk:
+                    on_chunk(error_msg)
+                yield error_msg
+                return error_msg
+
+        full_content = []
+        
+        # Try requested model, with automatic fallback if model name isn't found (e.g. gpt-5.5 -> gpt-4o)
+        models_to_try = [self.model_name]
+        if self.model_name not in ("gpt-4o", "gpt-4o-mini", "gpt-4-turbo"):
+            models_to_try.append("gpt-4o")
+            models_to_try.append("gpt-4o-mini")
+
+        last_exception = None
+        for model in models_to_try:
+            try:
+                logger.debug(f"Sending completion request to OpenAI (model={model})...")
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    stream=True
+                )
+
+                for chunk in response:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        content_piece = chunk.choices[0].delta.content
+                        full_content.append(content_piece)
+                        if on_chunk:
+                            on_chunk(content_piece)
+                        yield content_piece
+
+                # If successful, break model attempt loop
+                break
+
+            except OpenAIError as e:
+                last_exception = e
+                logger.warning(f"OpenAI API call failed for model {model}: {e}")
+                # Try next fallback model if available
+                continue
+            except Exception as e:
+                last_exception = e
+                logger.error(f"Unexpected error during stream: {e}")
+                break
+
+        if not full_content and last_exception:
+            error_text = f"\n[API Error]: {str(last_exception)}"
+            if on_chunk:
+                on_chunk(error_text)
+            yield error_text
+            return error_text
+
+        return "".join(full_content)
