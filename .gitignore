@@ -28,3 +28,7 @@ chroma_db/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Temporary Test Outputs
+*_test.png
+astra-os-v1.0.0-RC.zip

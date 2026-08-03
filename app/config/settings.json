@@ -1,0 +1,16 @@
+{
+  "llm_provider": "gemini",
+  "llm_model": "gemini-1.5-flash",
+  "voice_engine": "pyttsx3",
+  "voice_name": "Rachel",
+  "wake_word": "Hey Astra",
+  "theme": "dark_glass",
+  "auto_start_browser": true,
+  "max_context_tokens": 4096,
+  "plugin_permissions": {
+    "web_search": false,
+    "code_analyzer": true,
+    "terminal_control": false
+  },
+  "setup_completed": true
+}

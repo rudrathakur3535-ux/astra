@@ -21,8 +21,12 @@ class Settings(BaseModel):
         default_factory=lambda: os.getenv("OPENAI_API_KEY", ""),
         description="OpenAI API key"
     )
+    GEMINI_API_KEY: str = Field(
+        default_factory=lambda: os.getenv("GEMINI_API_KEY", ""),
+        description="Gemini API key"
+    )
     MODEL: str = Field(
-        default_factory=lambda: os.getenv("MODEL", "gpt-5.5"),
+        default_factory=lambda: os.getenv("MODEL", "gemini-1.5-flash"),
         description="LLM Model identifier"
     )
     DEFAULT_TEMPERATURE: float = Field(default=0.7, description="Default generation temperature")
@@ -60,14 +64,21 @@ class Settings(BaseModel):
 
     @property
     def is_api_key_valid(self) -> bool:
-        """Returns True if a non-placeholder OpenAI API key is set."""
-        key = self.OPENAI_API_KEY.strip()
-        return bool(key) and key != "your_openai_api_key_here"
+        """Returns True if a non-placeholder OpenAI or Gemini API key is set."""
+        from app.security.secret_manager import SecretManager
+        sm = SecretManager()
+        gemini_key = sm.get_secret("GEMINI_API_KEY") or self.GEMINI_API_KEY.strip()
+        openai_key = sm.get_secret("OPENAI_API_KEY") or self.OPENAI_API_KEY.strip()
+
+        has_gemini = bool(gemini_key) and gemini_key != "your_gemini_api_key_here"
+        has_openai = bool(openai_key) and openai_key != "your_openai_api_key_here"
+        return has_gemini or has_openai
 
     @property
     def is_elevenlabs_key_valid(self) -> bool:
         """Returns True if a non-placeholder ElevenLabs API key is set."""
-        key = self.ELEVENLABS_API_KEY.strip()
+        from app.security.secret_manager import SecretManager
+        key = SecretManager().get_secret("ELEVENLABS_API_KEY") or self.ELEVENLABS_API_KEY.strip()
         return bool(key) and key != "your_elevenlabs_api_key_here"
 
 settings = Settings()

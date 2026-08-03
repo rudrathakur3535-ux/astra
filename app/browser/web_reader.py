@@ -48,6 +48,11 @@ class WebReader:
                     lines.append(text)
 
             result_text = "\n".join(lines)
+            if not result_text:
+                # Fallback for pages using td/span/div text instead of h1-h3/p/li
+                raw_text = main_content.get_text(separator="\n", strip=True)
+                result_text = re.sub(r"\n{3,}", "\n\n", raw_text)
+
             result_text = re.sub(r"\n{3,}", "\n\n", result_text).strip()
 
             if len(result_text) > max_length:

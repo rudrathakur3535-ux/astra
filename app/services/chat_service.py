@@ -5,6 +5,7 @@ from app.brain.llm import LLMClient
 from app.tools import tool_registry, tool_router
 from app.models.tool_request import ToolRequest
 from app.voice import AudioManager, VoiceState
+from app.avatar import avatar_state_manager
 from app.config import settings
 from app.utils.logger import logger
 
@@ -44,11 +45,13 @@ class ChatService:
         logger.info(f"User message received ({len(trimmed_input)} chars)")
 
         def stream_wrapper() -> Generator[str, None, None]:
+            avatar_state_manager.set_thinking(True)
             messages = self.conversation.get_messages()
             tools_schema = tool_registry.get_openai_tools_schema()
 
             # 1. Check if query requires tool calls
             content, tool_calls = self.llm_client.chat_completion(messages=messages, tools=tools_schema)
+            avatar_state_manager.set_thinking(False)
 
             if tool_calls:
                 # Add assistant message with tool calls to memory

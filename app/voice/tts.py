@@ -15,14 +15,17 @@ class VoiceTTS:
         api_key: Optional[str] = None,
         voice_id: Optional[str] = None
     ):
-        self.api_key = api_key or settings.ELEVENLABS_API_KEY
+        from app.security.secret_manager import SecretManager
+        self.api_key = api_key or SecretManager().get_secret("ELEVENLABS_API_KEY") or settings.ELEVENLABS_API_KEY
         self.voice_id = voice_id or settings.ELEVENLABS_VOICE_ID
+        if self.voice_id == "21m00Tcm4TlvDq8ikWAM":
+            self.voice_id = "EXAVITQu4vr4xnSDxMaL"  # Free Tier Premade Sarah Voice
         self.elevenlabs_client: Optional[ElevenLabs] = None
         self._init_elevenlabs()
 
     def _init_elevenlabs(self) -> None:
         """Initializes ElevenLabs client if key is configured."""
-        if settings.is_elevenlabs_key_valid:
+        if self.api_key and len(self.api_key.strip()) > 10:
             try:
                 self.elevenlabs_client = ElevenLabs(api_key=self.api_key)
                 logger.info(f"ElevenLabs TTS initialized with voice_id: {self.voice_id}")
@@ -49,11 +52,10 @@ class VoiceTTS:
         # Try ElevenLabs first if configured
         if self.elevenlabs_client:
             try:
-                logger.debug(f"Synthesizing speech via ElevenLabs API for: '{trimmed[:30]}...'")
-                audio_stream = self.elevenlabs_client.generate(
+                audio_stream = self.elevenlabs_client.text_to_speech.convert(
+                    voice_id=self.voice_id,
                     text=trimmed,
-                    voice=self.voice_id,
-                    model="eleven_multilingual_v2"
+                    model_id="eleven_multilingual_v2"
                 )
 
                 # Collect binary chunks into byte buffer

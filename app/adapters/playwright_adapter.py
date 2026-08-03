@@ -40,7 +40,10 @@ class PlaywrightAdapter(BrowserPort):
                     headless=self.headless,
                     args=["--start-maximized"]
                 )
-                self._context = self._browser.new_context(no_viewport=True)
+                self._context = self._browser.new_context(
+                    no_viewport=True,
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+                )
                 initial_page = self._context.new_page()
                 self._pages = [initial_page]
                 self.session.active_tab_index = 0

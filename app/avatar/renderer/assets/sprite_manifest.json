@@ -1,0 +1,197 @@
+{
+  "canvas": {
+    "width": 576,
+    "height": 1024
+  },
+  "layers": {
+    "hair_back": {
+      "file": "hair_back.png",
+      "anchor": [
+        288,
+        130
+      ],
+      "z_index": 10,
+      "parent": "face_base"
+    },
+    "face_base": {
+      "file": "face_base.png",
+      "anchor": [
+        288,
+        175
+      ],
+      "z_index": 20,
+      "parent": "neck"
+    },
+    "eye_L": {
+      "file": "eye_L.png",
+      "anchor": [
+        249,
+        151
+      ],
+      "z_index": 30,
+      "parent": "face_base"
+    },
+    "eye_R": {
+      "file": "eye_R.png",
+      "anchor": [
+        334,
+        146
+      ],
+      "z_index": 30,
+      "parent": "face_base"
+    },
+    "eyebrow_L": {
+      "file": "eyebrow_L.png",
+      "anchor": [
+        239,
+        122
+      ],
+      "z_index": 40,
+      "parent": "face_base"
+    },
+    "eyebrow_R": {
+      "file": "eyebrow_R.png",
+      "anchor": [
+        336,
+        118
+      ],
+      "z_index": 40,
+      "parent": "face_base"
+    },
+    "mouth": {
+      "file": "mouth.png",
+      "anchor": [
+        288,
+        207
+      ],
+      "z_index": 50,
+      "parent": "face_base"
+    },
+    "hair_front": {
+      "file": "hair_front.png",
+      "anchor": [
+        288,
+        110
+      ],
+      "z_index": 60,
+      "parent": "face_base"
+    },
+    "torso": {
+      "file": "torso.png",
+      "anchor": [
+        288,
+        238
+      ],
+      "z_index": 15,
+      "parent": "root"
+    },
+    "neck": {
+      "file": "neck.png",
+      "anchor": [
+        288,
+        225
+      ],
+      "z_index": 18,
+      "parent": "torso"
+    },
+    "upper_arm_L": {
+      "file": "upper_arm_L.png",
+      "anchor": [
+        210,
+        245
+      ],
+      "z_index": 25,
+      "parent": "torso"
+    },
+    "upper_arm_R": {
+      "file": "upper_arm_R.png",
+      "anchor": [
+        366,
+        245
+      ],
+      "z_index": 25,
+      "parent": "torso"
+    },
+    "lower_arm_L": {
+      "file": "lower_arm_L.png",
+      "anchor": [
+        188,
+        388
+      ],
+      "z_index": 35,
+      "parent": "upper_arm_L"
+    },
+    "lower_arm_R": {
+      "file": "lower_arm_R.png",
+      "anchor": [
+        388,
+        388
+      ],
+      "z_index": 35,
+      "parent": "upper_arm_R"
+    },
+    "hand_L": {
+      "file": "hand_L.png",
+      "anchor": [
+        182,
+        478
+      ],
+      "z_index": 45,
+      "parent": "lower_arm_L"
+    },
+    "hand_R": {
+      "file": "hand_R.png",
+      "anchor": [
+        394,
+        478
+      ],
+      "z_index": 45,
+      "parent": "lower_arm_R"
+    },
+    "hip": {
+      "file": "hip.png",
+      "anchor": [
+        288,
+        420
+      ],
+      "z_index": 5,
+      "parent": "torso"
+    },
+    "leg_L": {
+      "file": "leg_L.png",
+      "anchor": [
+        242,
+        520
+      ],
+      "z_index": 8,
+      "parent": "hip"
+    },
+    "leg_R": {
+      "file": "leg_R.png",
+      "anchor": [
+        334,
+        520
+      ],
+      "z_index": 8,
+      "parent": "hip"
+    },
+    "shoe_L": {
+      "file": "shoe_L.png",
+      "anchor": [
+        228,
+        808
+      ],
+      "z_index": 62,
+      "parent": "leg_L"
+    },
+    "shoe_R": {
+      "file": "shoe_R.png",
+      "anchor": [
+        348,
+        810
+      ],
+      "z_index": 62,
+      "parent": "leg_R"
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "astra-desktop-app",
+  "version": "1.0.0",
+  "description": "Project Astra OS - Desktop Shell Application (Electron + React)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "keywords": [
+    "astra",
+    "ai-os",
+    "desktop-app",
+    "electron",
+    "react"
+  ],
+  "author": "Astra Architecture Group",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  astra-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: astra-os-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ASTRA_ENV=production
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./app/database:/app/app/database
+      - ./app/logs:/app/app/logs
+    restart: unless-stopped

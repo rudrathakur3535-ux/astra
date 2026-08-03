@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astra OS — Interactive 2D Animated Character Companion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .avatar-viewport {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 70%);
+        }
+
+        #avatar-container {
+            width: 576px;
+            height: 1024px;
+            max-height: 80vh;
+            position: relative;
+        }
+
+        /* Controls Panel for Testing */
+        .controls-panel {
+            background: #1e293b;
+            border-top: 1px solid #334155;
+            padding: 16px 24px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select, button, input {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #f8fafc;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:focus, button:focus {
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3);
+        }
+
+        button:hover {
+            background: #38bdf8;
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        .active-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            box-shadow: 0 0 10px #4ade80;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="avatar-viewport">
+        <div id="avatar-container"></div>
+    </div>
+
+    <div class="controls-panel">
+        <div class="active-badge">
+            <span class="pulse-dot"></span> Astra Avatar Active
+        </div>
+
+        <div class="control-group">
+            <label>Emotion</label>
+            <select id="emotionSelect" onchange="overrideState()">
+                <option value="neutral">Neutral</option>
+                <option value="happy">Happy</option>
+                <option value="smile">Smile</option>
+                <option value="excited">Excited</option>
+                <option value="laughing">Laughing</option>
+                <option value="thinking">Thinking</option>
+                <option value="curious">Curious</option>
+                <option value="serious">Serious</option>
+                <option value="focused">Focused</option>
+                <option value="confident">Confident</option>
+                <option value="determined">Determined</option>
+                <option value="surprised">Surprised</option>
+                <option value="worried">Worried</option>
+                <option value="sad">Sad</option>
+                <option value="angry">Angry</option>
+                <option value="relaxed">Relaxed</option>
+                <option value="proud">Proud</option>
+                <option value="playful">Playful</option>
+                <option value="greeting">Greeting</option>
+                <option value="shy">Shy</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Outfit</label>
+            <select id="outfitSelect" onchange="overrideState()">
+                <option value="relax">Relax</option>
+                <option value="focus">Focus (Coding)</option>
+                <option value="creative">Creative</option>
+                <option value="travel">Travel</option>
+                <option value="night">Night</option>
+                <option value="presentation">Presentation</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Gesture</label>
+            <select id="gestureSelect" onchange="overrideState()">
+                <option value="none">None</option>
+                <option value="wave">Wave</option>
+                <option value="point">Point</option>
+                <option value="explain">Explain</option>
+                <option value="present">Present</option>
+                <option value="welcome">Welcome</option>
+                <option value="thinking">Thinking</option>
+            </select>
+        </div>
+
+        <button onclick="toggleSpeaking()">🗣 Toggle Speaking</button>
+        <button onclick="toggleListening()">🎙 Toggle Listening</button>
+    </div>
+
+    <!-- Animation Engine JavaScript -->
+    <script src="/avatar/static/animation_engine.js"></script>
+    <script>
+        let avatarEngine = null;
+        let isSpeaking = false;
+        let isListening = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            avatarEngine = window.initAstraAvatar('avatar-container', {
+                manifestUrl: '/avatar/static/assets/sprite_manifest.json',
+                assetsDir: '/avatar/static/assets/'
+            });
+        });
+
+        async function overrideState() {
+            const emotion = document.getElementById('emotionSelect').value;
+            const outfit_mode = document.getElementById('outfitSelect').value;
+            const gesture = document.getElementById('gestureSelect').value;
+
+            await fetch('/avatar/state/manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    emotion,
+                    outfit_mode,
+                    gesture,
+                    reply_text: `Testing character state: ${emotion} (${outfit_mode})`
+                })
+            });
+        }
+
+        async function toggleSpeaking() {
+            isSpeaking = !isSpeaking;
+            await fetch('/avatar/speaking', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ active: isSpeaking })
+            });
+        }
+
+        async function toggleListening() {
+            isListening = !isListening;
+            await fetch('/avatar/listening', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ active: isListening })
+            });
+        }
+    </script>
+</body>
+</html>
