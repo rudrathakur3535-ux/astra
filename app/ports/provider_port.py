@@ -1,28 +1,27 @@
-"""
-Provider Port Interface for Project Astra OS (Hexagonal Architecture).
-"""
-
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
-from app.models.provider_status import ProviderStatus
+from typing import AsyncGenerator, Optional
 
-
-class ProviderPort(ABC):
-    """
-    Abstract Hexagonal Port interface for LLM Provider Adapters.
-    """
-
+class BaseLLMProviderPort(ABC):
     @abstractmethod
-    def generate_completion(self, prompt: str, system_prompt: Optional[str] = None, **kwargs) -> Dict[str, Any]:
-        """Generates LLM text response."""
+    async def generate_response(self, prompt: str, system_prompt: Optional[str] = None) -> str:
         pass
 
     @abstractmethod
-    def generate_embedding(self, text: str) -> List[float]:
-        """Generates vector embedding for text."""
+    async def stream_response(self, prompt: str, system_prompt: Optional[str] = None) -> AsyncGenerator[str, None]:
         pass
 
+class BaseSTTProviderPort(ABC):
     @abstractmethod
-    def get_status(self) -> ProviderStatus:
-        """Returns provider health status and latency."""
+    async def transcribe_audio(self, audio_bytes: bytes) -> str:
         pass
+
+class BaseTTSProviderPort(ABC):
+    @abstractmethod
+    async def synthesize_speech_stream(self, text: str) -> AsyncGenerator[bytes, None]:
+        pass
+
+# Aliases for backwards compatibility
+ProviderPort = BaseLLMProviderPort
+LLMProviderPort = BaseLLMProviderPort
+STTProviderPort = BaseSTTProviderPort
+TTSProviderPort = BaseTTSProviderPort
