@@ -1,14 +1,15 @@
-"""
-Agent Task Model for Project Astra.
-Represents an atomic task assigned to a specialist agent within a multi-agent workflow.
-"""
-
-from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, Any, List, Optional
-import time
+from typing import Dict, Any, Optional
+from pydantic import BaseModel, Field
+from datetime import datetime
 import uuid
 
+class TaskStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
 
 class TaskPriority(str, Enum):
     LOW = "low"
@@ -16,31 +17,20 @@ class TaskPriority(str, Enum):
     HIGH = "high"
     CRITICAL = "critical"
 
+class TaskResult(BaseModel):
+    task_id: str
+    status: TaskStatus
+    output: Optional[Any] = None
+    error: Optional[str] = None
+    execution_time_seconds: float = 0.0
 
-@dataclass
-class AgentTask:
-    """
-    Task definition assigned to a specialist agent.
-    """
+class AgentTask(BaseModel):
+    task_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
     description: str
-    target_agent_type: str = "general"
-    input_data: Dict[str, Any] = field(default_factory=dict)
+    target_agent: str
     priority: TaskPriority = TaskPriority.MEDIUM
-    task_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    dependencies: List[str] = field(default_factory=list)  # List of prerequisite task IDs
-    max_retries: int = 2
-    timeout_seconds: float = 30.0
-    created_at: float = field(default_factory=time.time)
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "task_id": self.task_id,
-            "description": self.description,
-            "target_agent_type": self.target_agent_type,
-            "input_data": self.input_data,
-            "priority": self.priority.value if isinstance(self.priority, TaskPriority) else self.priority,
-            "dependencies": self.dependencies,
-            "max_retries": self.max_retries,
-            "timeout_seconds": self.timeout_seconds,
-            "created_at": self.created_at
-        }
+    status: TaskStatus = TaskStatus.PENDING
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = None

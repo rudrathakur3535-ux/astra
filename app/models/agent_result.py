@@ -1,37 +1,18 @@
-"""
-Agent Result Model for Project Astra.
-Standardized output payload returned by specialist agent executions.
-"""
+from typing import Dict, Any, Optional
+from pydantic import BaseModel, Field
+from datetime import datetime
 
-from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional
-import time
+class ExecutionMetrics(BaseModel):
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    latency_ms: float = 0.0
+    cost_usd: float = 0.0
 
-
-@dataclass
-class AgentResult:
-    """
-    Standardized result payload returned by an agent upon completing a task.
-    """
-    task_id: str
+class AgentResult(BaseModel):
     agent_name: str
     success: bool
-    data: Optional[Dict[str, Any]] = None
+    data: Dict[str, Any] = Field(default_factory=dict)
     error_message: Optional[str] = None
-    execution_time_ms: float = 0.0
-    retry_count: int = 0
-    artifacts: List[str] = field(default_factory=list)
-    timestamp: float = field(default_factory=time.time)
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "task_id": self.task_id,
-            "agent_name": self.agent_name,
-            "success": self.success,
-            "data": self.data,
-            "error_message": self.error_message,
-            "execution_time_ms": self.execution_time_ms,
-            "retry_count": self.retry_count,
-            "artifacts": self.artifacts,
-            "timestamp": self.timestamp
-        }
+    metrics: ExecutionMetrics = Field(default_factory=ExecutionMetrics)
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
