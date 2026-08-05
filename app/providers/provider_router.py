@@ -3,7 +3,7 @@ AI Provider Router for Project Astra OS.
 Dispatches requests across OpenAI, Gemini, OpenRouter, and Ollama.
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, AsyncGenerator
 from app.ports.provider_port import ProviderPort
 from app.adapters.ollama_adapter import OllamaAdapter
 from app.models.provider_status import ProviderStatus, ProviderState
@@ -15,6 +15,15 @@ class MockCloudProviderAdapter(ProviderPort):
     def __init__(self, provider_name: str, latency: float = 120.0):
         self.name = provider_name
         self.latency = latency
+
+    async def generate_response(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        res = f"[{self.name} Output for: '{prompt}']"
+        if system_prompt:
+            res += f" System: {system_prompt}"
+        return res
+
+    async def stream_response(self, prompt: str, system_prompt: Optional[str] = None) -> AsyncGenerator[str, None]:
+        yield f"[{self.name} Output for: '{prompt}']"
 
     def generate_completion(self, prompt: str, system_prompt: Optional[str] = None, **kwargs) -> Dict[str, Any]:
         return {
@@ -36,6 +45,7 @@ class MockCloudProviderAdapter(ProviderPort):
             is_local=False,
             privacy_rating="encrypted_cloud"
         )
+
 
 
 class ProviderRouter:

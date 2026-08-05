@@ -17,3 +17,6 @@ class EventBus:
                     await callback(data)
                 else:
                     callback(data)
+
+event_bus = EventBus()
+

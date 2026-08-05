@@ -1,5 +1,5 @@
 from .app_api import router as app_router
-from .avatar_api import router as avatar_router
+from .avatar_api import router as avatar_router, ws_router as avatar_ws_router
 from .dashboard_api import router as dashboard_router
 from .deployment_api import router as deployment_router
 from .integrations_api import router as integrations_router
@@ -11,6 +11,7 @@ from .sync_mcp_api import router as sync_mcp_router
 __all__ = [
     "app_router",
     "avatar_router",
+    "avatar_ws_router",
     "dashboard_router",
     "deployment_router",
     "integrations_router",
@@ -19,3 +20,4 @@ __all__ = [
     "release_router",
     "sync_mcp_router"
 ]
+

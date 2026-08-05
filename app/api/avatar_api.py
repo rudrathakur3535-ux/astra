@@ -73,6 +73,9 @@ async def update_state_manually(req: ManualStateRequest):
     )
     return {"status": "success", "state": updated.to_dict()}
 
+ws_router = APIRouter()
+
+@ws_router.websocket("/ws/avatar")
 @router.websocket("/ws/avatar")
 async def avatar_websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
@@ -88,3 +91,4 @@ async def avatar_websocket_endpoint(websocket: WebSocket):
             }))
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+

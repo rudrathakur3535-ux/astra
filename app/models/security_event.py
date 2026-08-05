@@ -16,3 +16,6 @@ class SecurityEvent(BaseModel):
     user_confirmed: bool = False
     context_details: Dict[str, Any] = Field(default_factory=dict)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+SecuritySeverity = RiskLevel
+

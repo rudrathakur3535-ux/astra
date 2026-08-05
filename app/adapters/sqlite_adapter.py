@@ -102,3 +102,6 @@ class SQLiteMemoryAdapter(BaseMemoryPort):
                 conn.close()
             return True
         return await loop.run_in_executor(None, _execute)
+
+SQLiteAdapter = SQLiteMemoryAdapter
+
